@@ -1,14 +1,16 @@
-import { ColorsTerminal } from "../utils/colors-terminal";
+import { MessageType } from "../models/enumerations/message-type.enum";
+import { Robot } from "../models/enumerations/robot.enum";
+import { Log } from "../models/log.model";
+import { State as state } from "./state";
+
 const imageDownloader = require("image-downloader");
 const google = require("googleapis").google;
 const customSearch = google.customsearch("v1");
-const state = require("./state.js");
-// const colorsTerminal = require("../utils/colorsTerminal");
 
 const googleSearchCredentials = require("../credentials/google-search.json");
 
-async function robot() {
-  console.log("> [image-robot] Starting...");
+export async function robotImage() {
+  console.log(Log.getLogTemplate(Robot.IMAGE, MessageType.INFO, "Starting..."));
   const content = state.load();
 
   await fetchImagesOfAllSentences(content);
@@ -32,7 +34,11 @@ async function robot() {
       }
 
       console.log(
-        `${ColorsTerminal.CURRENT_ROBOT}> [image-robot] Querying Google Images with: "${query}"`
+        Log.getLogTemplate(
+          Robot.IMAGE,
+          MessageType.INFO,
+          `Querying Google Images with: "${query}"`
+        )
       );
 
       content.sentences[sentenceIndex].images =
@@ -72,22 +78,33 @@ async function robot() {
 
         try {
           if (content.downloadedImages.includes(imageUrl)) {
-            // throw new Error(`> [image-robot] ${fgRed} Error ${fgReset} Image already downloaded`);
             throw new Error(
-              `> [image-robot] ${ColorsTerminal.CURRENT_ROBOT} Error ${ColorsTerminal.RESET} Image already downloaded`
+              Log.getLogTemplate(
+                Robot.IMAGE,
+                MessageType.ERROR,
+                `Image already downloaded`
+              )
             );
           }
 
           await downloadAndSave(imageUrl, `${sentenceIndex}-original.png`);
           content.downloadedImages.push(imageUrl);
-          // console.log(
-          // `> [image-robot] [${sentenceIndex}][${imageIndex}] ${fgGreen} Image successfully downloaded: ${fgReset} ${imageUrl}`
-          // );
+          console.log(
+            Log.getLogTemplate(
+              Robot.IMAGE,
+              MessageType.SUCCESS,
+              `Image ${imageIndex} successfully downloaded: ${imageUrl}`
+            )
+          );
           break;
         } catch (error) {
-          // console.log(
-          //   `> [image-robot] [${sentenceIndex}][${imageIndex}] ${fgRed} Error ${fgReset} (${imageUrl}): ${error}`
-          // );
+          console.log(
+            Log.getLogTemplate(
+              Robot.IMAGE,
+              MessageType.ERROR,
+              `Image ${imageIndex}: ${imageUrl}`
+            )
+          );
         }
       }
     }
@@ -100,5 +117,3 @@ async function robot() {
     });
   }
 }
-
-module.exports = robot;

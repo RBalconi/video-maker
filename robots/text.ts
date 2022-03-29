@@ -1,9 +1,14 @@
 const sentenceBoundaryDetection = require("sbd");
+import { Content } from "../models/content.model";
+import { MessageType } from "../models/enumerations/message-type.enum";
+import { Robot } from "../models/enumerations/robot.enum";
+import { Log } from "../models/log.model";
+import { State as state } from "./state";
 const wikipedia = require("./wikipedia");
-const state = require("./state.js");
 
-async function robot() {
-  console.log("> [text-robot] Starting...");
+export async function robotText() {
+  console.log(Log.getLogTemplate(Robot.TEXT, MessageType.INFO, "Starting..."));
+
   const content = state.load();
 
   await fetchContentFromWikipedia(content);
@@ -13,15 +18,23 @@ async function robot() {
 
   state.save(content);
 
-  async function fetchContentFromWikipedia(content) {
-    console.log("> [text-robot] Fetching content from Wikipedia");
+  async function fetchContentFromWikipedia(content: Content) {
+    console.log(
+      Log.getLogTemplate(
+        Robot.TEXT,
+        MessageType.INFO,
+        "Fetching content from Wikipedia"
+      )
+    );
     const wikipediaResponse = await wikipedia(content);
 
-    content.sourceContentOriginal = wikipediaResponse.content;
-    console.log("> [text-robot] Fetching done!");
+    content.sourceContentOriginal = wikipediaResponse.sourceContentOriginal;
+    console.log(
+      Log.getLogTemplate(Robot.TEXT, MessageType.SUCCESS, "Fetching Done!")
+    );
   }
 
-  function sanitizeContent(content) {
+  function sanitizeContent(content: Content) {
     const withoutBlankLinesAndMarkdown = removeBlankLinesAndMarkdown(
       content.sourceContentOriginal
     );
@@ -50,23 +63,23 @@ async function robot() {
     return text.replace(/\((?:\([^()]*\)|[^()])*\)/gm, "").replace(/  /g, " ");
   }
 
-  function breakContentIntoSentences(content) {
+  function breakContentIntoSentences(content: Content) {
     // content.sentences = [];
 
-    const sentences = sentenceBoundaryDetection.sentences(
+    const sentences: Array<string> = sentenceBoundaryDetection.sentences(
       content.sourceContentSanitized
     );
-    sentences.forEach((sentence) => {
-      content.sentences.push({
+
+    sentences.slice(0, content.maximumSentences).forEach((sentence, i) => {
+      content.sentences.splice(i, 1, {
         text: sentence,
         images: [],
+        keywords: content.sentences[i].keywords,
       });
     });
   }
 
-  function limitMaximumSentences(content) {
+  function limitMaximumSentences(content: Content) {
     content.sentences = content.sentences.slice(0, content.maximumSentences);
   }
 }
-
-module.exports = robot;
